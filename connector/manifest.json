@@ -2,7 +2,7 @@
   "manifest_version": "0.3",
   "name": "trackit-itsm",
   "display_name": "Track-It ITSM",
-  "version": "1.0.1",
+  "version": "1.0.4",
   "description": "Manage BMC Track-It 2021 tickets, assignments, and solutions from Claude.",
   "author": {
     "name": "ACME Network IT"
