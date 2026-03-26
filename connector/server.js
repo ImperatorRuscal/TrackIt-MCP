@@ -40,10 +40,17 @@ const mcpRemoteScript = path.join(mcpRemoteDir, binRelPath);
 process.stderr.write('[trackit] mcp-remote script: ' + mcpRemoteScript + '\n');
 process.stderr.write('[trackit] mcp-remote exists: ' + fs.existsSync(mcpRemoteScript) + '\n');
 
+// NODE_TLS_REJECT_UNAUTHORIZED=0 allows mcp-remote to connect to servers with
+// self-signed or internally-issued TLS certificates.  Claude Desktop's embedded
+// Node.js does not share the Windows certificate store, so it rejects certs that
+// are trusted in the OS.  This is safe for a controlled corporate-intranet URL.
 const child = spawn(
   process.execPath,
   [mcpRemoteScript, url, '--header', authHeader, '--debug'],
-  { stdio: 'inherit' }
+  {
+    stdio: 'inherit',
+    env: { ...process.env, NODE_TLS_REJECT_UNAUTHORIZED: '0' },
+  }
 );
 
 child.on('exit',  (code) => {
