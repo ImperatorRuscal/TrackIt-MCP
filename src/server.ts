@@ -2,6 +2,7 @@ import "dotenv/config";
 import { randomUUID } from "crypto";
 import https from "https";
 import fs from "fs";
+import path from "path";
 import express, { Request, Response, NextFunction } from "express";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
@@ -19,7 +20,7 @@ import { registerMiscTools } from "./tools/misc.js";
 // in sync without manual updates
 // ---------------------------------------------------------------------------
 const SERVER_VERSION: string = (
-  JSON.parse(fs.readFileSync(new URL("../package.json", import.meta.url), "utf8")) as { version: string }
+  JSON.parse(fs.readFileSync(path.join(__dirname, "../package.json"), "utf8")) as { version: string }
 ).version;
 
 // Catch anything that escapes route handlers (e.g. async bugs in the MCP SDK)
