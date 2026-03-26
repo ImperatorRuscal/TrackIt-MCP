@@ -1,0 +1,8 @@
+{
+  "name": "trackit-connector",
+  "version": "1.0.0",
+  "private": true,
+  "dependencies": {
+    "mcp-remote": "latest"
+  }
+}

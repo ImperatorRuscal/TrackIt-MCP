@@ -1,0 +1,52 @@
+{
+  "manifest_version": "0.3",
+  "name": "trackit-itsm",
+  "display_name": "Track-It ITSM",
+  "version": "1.0.1",
+  "description": "Manage BMC Track-It 2021 tickets, assignments, and solutions from Claude.",
+  "author": {
+    "name": "ACME Network IT"
+  },
+  "server": {
+    "type": "node",
+    "entry_point": "server.js",
+    "mcp_config": {
+      "command": "node",
+      "args": ["${__dirname}/server.js"],
+      "env": {
+        "TRACKIT_URL": "https://awsc-trackit-02.acmenetwork.com:3000/mcp",
+        "TRACKIT_GROUP": "${user_config.group}",
+        "TRACKIT_DOMAIN": "${user_config.domain}",
+        "TRACKIT_USERNAME": "${user_config.username}",
+        "TRACKIT_PASSWORD": "${user_config.password}"
+      }
+    }
+  },
+  "user_config": {
+    "group": {
+      "type": "string",
+      "title": "Track-It Group",
+      "description": "Your Track-It group name (e.g. HELP DESK)",
+      "required": true
+    },
+    "domain": {
+      "type": "string",
+      "title": "Windows Domain",
+      "description": "Your Windows domain name (e.g. ACMENETWORK)",
+      "required": true
+    },
+    "username": {
+      "type": "string",
+      "title": "Username",
+      "description": "Your Windows username (without domain prefix)",
+      "required": true
+    },
+    "password": {
+      "type": "string",
+      "title": "Password",
+      "description": "Your Windows password",
+      "required": true,
+      "sensitive": true
+    }
+  }
+}
