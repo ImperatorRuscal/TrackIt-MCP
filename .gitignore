@@ -3,6 +3,7 @@ dist/
 .env
 logs/*.log
 data/
-certs/
+certs/*
+!certs/.gitkeep
 connector/node_modules/
 .claude/
