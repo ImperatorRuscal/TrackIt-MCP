@@ -2,7 +2,7 @@ import "dotenv/config";
 import { randomUUID } from "crypto";
 import https from "https";
 import fs from "fs";
-import express, { Request, Response } from "express";
+import express, { Request, Response, NextFunction } from "express";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 
@@ -13,6 +13,23 @@ import { registerTicketTools } from "./tools/tickets.js";
 import { registerAssignmentTools } from "./tools/assignments.js";
 import { registerSolutionTools } from "./tools/solutions.js";
 import { registerMiscTools } from "./tools/misc.js";
+
+// ---------------------------------------------------------------------------
+// Version — read once from package.json so health check and MCP metadata stay
+// in sync without manual updates
+// ---------------------------------------------------------------------------
+const SERVER_VERSION: string = (
+  JSON.parse(fs.readFileSync(new URL("../package.json", import.meta.url), "utf8")) as { version: string }
+).version;
+
+// Catch anything that escapes route handlers (e.g. async bugs in the MCP SDK)
+process.on("unhandledRejection", (reason) => {
+  console.error("[trackit-mcp] unhandledRejection:", reason);
+});
+process.on("uncaughtException", (err) => {
+  console.error("[trackit-mcp] uncaughtException:", err);
+  process.exit(1);
+});
 
 // ---------------------------------------------------------------------------
 // Validate required config at startup
@@ -72,7 +89,7 @@ const sessions = new Map<string, Session>();
  */
 function createMcpServer(getToken: () => Promise<string>): McpServer {
   const server = new McpServer(
-    { name: "trackit-mcp", version: "1.0.0" },
+    { name: "trackit-mcp", version: SERVER_VERSION },
     { instructions: SERVER_INSTRUCTIONS }
   );
 
@@ -97,7 +114,7 @@ app.get("/health", (_req, res) => {
   res.json({
     status: "ok",
     server: "trackit-mcp",
-    version: "1.0.0",
+    version: SERVER_VERSION,
     activeSessions: sessions.size,
     storedTokens: tokenStore.size(),
   });
@@ -111,8 +128,10 @@ app.use("/", createOAuthRouter(tokenStore));
 // ---------------------------------------------------------------------------
 // MCP endpoint
 // ---------------------------------------------------------------------------
-app.post("/mcp", async (req: Request, res: Response) => {
+app.post("/mcp", async (req: Request, res: Response, next: NextFunction) => {
   const sessionId = req.headers["mcp-session-id"] as string | undefined;
+  const method   = (req.body as { method?: string } | undefined)?.method ?? "(unknown)";
+  console.log(`[mcp] ${sessionId ? `session:${sessionId.slice(0, 8)}` : "new-session"} → ${method}`);
 
   // --- Existing session: route request to its transport ---
   if (sessionId) {
@@ -121,7 +140,12 @@ app.post("/mcp", async (req: Request, res: Response) => {
       res.status(404).json({ error: "Session not found or expired. Re-initialize the MCP connection." });
       return;
     }
-    await session.transport.handleRequest(req, res, req.body);
+    try {
+      await session.transport.handleRequest(req, res, req.body);
+    } catch (err: unknown) {
+      console.error(`[mcp] error in session ${sessionId.slice(0, 8)} (${method}):`, err);
+      next(err);
+    }
     return;
   }
 
@@ -192,8 +216,13 @@ app.post("/mcp", async (req: Request, res: Response) => {
 
   const server = createMcpServer(getToken);
   res.on("close", () => transport.close());
-  await server.connect(transport);
-  await transport.handleRequest(req, res, req.body);
+  try {
+    await server.connect(transport);
+    await transport.handleRequest(req, res, req.body);
+  } catch (err: unknown) {
+    console.error(`[mcp] error during initialize (${method}):`, err);
+    next(err);
+  }
 });
 
 // Reject non-POST on /mcp
@@ -206,10 +235,19 @@ app.use((_req, res) => {
   res.status(404).json({ error: "not_found" });
 });
 
+// Express error handler — logs to console and returns JSON (not an HTML stack trace)
+app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {
+  const msg = err instanceof Error ? err.message : String(err);
+  console.error("[trackit-mcp] unhandled route error:", err);
+  if (!res.headersSent) {
+    res.status(500).json({ error: "internal_server_error", message: msg });
+  }
+});
+
 const { TLS_CERT_PATH, TLS_KEY_PATH } = process.env;
 
 function logStartup(proto: string) {
-  console.log(`trackit-mcp listening on ${proto}://0.0.0.0:${PORT}`);
+  console.log(`trackit-mcp v${SERVER_VERSION} listening on ${proto}://0.0.0.0:${PORT}`);
   console.log(`  MCP endpoint:  ${proto}://0.0.0.0:${PORT}/mcp`);
   console.log(`  Health check:  ${proto}://0.0.0.0:${PORT}/health`);
   console.log(`  OAuth login:   ${proto}://0.0.0.0:${PORT}/authorize`);
