@@ -34,6 +34,23 @@ await build({
   // These Node built-ins are always available in Claude Desktop's embedded runtime
   external: ["https", "http", "readline", "crypto", "buffer", "url", "path"],
   logLevel: "info",
+  plugins: [
+    {
+      // Claude Desktop's embedded Node.js supports bare built-in names (e.g. "process",
+      // "https") but not the "node:" URL-scheme prefix (e.g. "node:process").
+      // The MCP SDK imports 'node:process' in StdioServerTransport, which esbuild would
+      // leave as require("node:process") — a top-level call that crashes before our
+      // error handlers are registered.  Strip the prefix so the bundle uses the bare
+      // name that the embedded runtime understands.
+      name: "strip-node-prefix",
+      setup(build) {
+        build.onResolve({ filter: /^node:/ }, (args) => ({
+          path: args.path.slice("node:".length), // "node:process" → "process"
+          external: true,
+        }));
+      },
+    },
+  ],
 });
 
 console.log("Bundle written to connector/server.js");

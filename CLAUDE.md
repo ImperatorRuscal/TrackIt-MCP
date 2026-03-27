@@ -38,6 +38,7 @@ npx tsc --noEmit     # type-check only
 - **No `node_modules` in the connector.** esbuild bundles everything into a single `server.js`. The MCPB archive contains only `manifest.json` + `server.js`.
 - **`${user_config.fieldname}` substitution** works in manifest `env` values but NOT in `args`. Credentials flow in as environment variables.
 - **`child_process.spawn()` and `fs` writes are sandboxed** in Claude Desktop's embedded Node.js. Don't add them.
+- **`node:` URL-scheme prefix is NOT supported** in Claude Desktop's embedded Node.js runtime. The MCP SDK uses `import process from 'node:process'` which esbuild would compile to a top-level `require("node:process")` — failing silently before error handlers are registered. The build script uses a `strip-node-prefix` esbuild plugin to remap all `node:*` imports to their bare-name equivalents (e.g. `process`, `https`). Do not remove this plugin.
 - **Zod v4 is installed.** `z.record()` requires two arguments: `z.record(z.string(), z.unknown())`. The single-argument form from Zod v3 does not compile.
 
 ## Version management — REQUIRED before every push

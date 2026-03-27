@@ -267,9 +267,12 @@ Include all of these in the MCP server's `instructions` field:
 - `child_process.spawn()` — Claude Desktop's embedded Node.js sandboxes this module; any connector that tries to spawn a subprocess will silently fail with no error output
 - `fs` module writes — may also be sandboxed; don't rely on file I/O in connector code
 - Remote HTTP MCP servers from Claude.ai web — intranet servers are unreachable; only works if the server has a public URL
+- `node:` URL-scheme prefix (e.g. `require("node:process")`) — the embedded runtime supports bare built-in names only; use `require("process")` not `require("node:process")`
 
 ### Node.js built-ins that are confirmed available in the embedded runtime
 `https`, `http`, `readline`, `Buffer`, `URL`, `process`, `crypto`
+
+> **Important for bundled connectors:** Any dependency that uses `import x from 'node:process'` (or other `node:` prefixed imports) will be compiled by esbuild into a top-level `require("node:process")` that fails before your error handlers run, causing a silent crash with no log output.  The build script in this repo uses an esbuild plugin (`strip-node-prefix`) to remap all `node:*` imports to their bare equivalents so the bundle is compatible with the embedded runtime.
 
 ---
 
