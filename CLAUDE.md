@@ -2,8 +2,61 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## Repository state
+## What this project is
 
-This repository currently contains one tracked file: `BOOTSTRAP.md`.
+A TypeScript MCP server for BMC Track-It 2021, packaged as a `.mcpb` file for Claude Desktop. It runs as a local stdio child process — one instance per user machine — and exposes 32 tools covering tickets, assignments, solutions, search, notes, attachments, status changes, and priority hierarchy.
 
-`BOOTSTRAP.md` is a prompt-feeding knowledge base for building an MCP integration against BMC Track-It 2021. It documents the non-obvious details discovered through implementation — authentication quirks, API conventions, endpoint reference, connector packaging requirements, and LLM system instruction hints. Read it before starting any implementation work.
+Read `BOOTSTRAP.md` before starting any implementation work. It documents the non-obvious Track-It API quirks (auth format, POST-for-update, spaced field names, the `priorityheirarchy` typo, etc.) that are not in the official docs.
+
+## Project layout
+
+```
+src/
+  auth.ts            — OAuth2 token cache (password grant + refresh token)
+  trackit-client.ts  — All Track-It HTTP calls; one export per API operation
+  server-stdio.ts    — MCP server: tool registration + StdioServerTransport
+connector/
+  manifest.json      — MCPB manifest; all 5 credentials are user_config fields
+scripts/
+  build-connector.mjs — esbuild bundle → ZIP → .mcpb (no external zip dep)
+```
+
+## Build commands
+
+```bash
+npm install          # first time only
+npm run bundle       # compile + bundle + package → connector/trackit-mcp.mcpb
+npm run build        # tsc only (type-check + emit to dist/)
+npx tsc --noEmit     # type-check only
+```
+
+`npm run dev` is for local smoke-testing only; it requires environment variables set (see below).
+
+## Architecture notes
+
+- **Stdio transport only.** Claude Desktop runs the server as a child process; stdout is the MCP JSON-RPC channel. Never write to stdout — always use `process.stderr.write()` for diagnostics.
+- **No `node_modules` in the connector.** esbuild bundles everything into a single `server.js`. The MCPB archive contains only `manifest.json` + `server.js`.
+- **`${user_config.fieldname}` substitution** works in manifest `env` values but NOT in `args`. Credentials flow in as environment variables.
+- **`child_process.spawn()` and `fs` writes are sandboxed** in Claude Desktop's embedded Node.js. Don't add them.
+- **Zod v4 is installed.** `z.record()` requires two arguments: `z.record(z.string(), z.unknown())`. The single-argument form from Zod v3 does not compile.
+
+## Version management — REQUIRED before every push
+
+The version appears in three places and must be kept in sync. Before committing and pushing any change, increment the patch version (`zz` in `xx.yy.zz`) in all three:
+
+1. `package.json` → `"version"` field
+2. `src/server-stdio.ts` → `const SERVER_VERSION = "..."`
+3. `connector/manifest.json` → `"version"` field
+
+Do this as part of the same commit as the change, not as a separate commit.
+
+## Track-It API key rules (from BOOTSTRAP.md)
+
+- Username format: `GROUP\DOMAIN\username` (backslashes, GROUP can have spaces)
+- Create = `POST /tickets`, Update = `POST /tickets/{id}`, Delete = `POST /tickets/{id}/Delete`
+- Pagination is path segments `/{pageSize}/{pageNumber}` — use `0/0` for all records
+- Field names have spaces: `"Assigned Tech"`, `"Note Type"`, etc.
+- `priorityheirarchy` is the correct (misspelled) endpoint name
+- Priority hierarchy takes integer IDs: `DepartmentId`, `CategoryId`, `LocationId`, `RequestorId`
+- Assignment notes have no `Private` field; ticket notes do
+- `get_module_fields` must be called before any create/update to get exact field names
