@@ -2,7 +2,7 @@
   "manifest_version": "0.3",
   "name": "trackit-itsm",
   "display_name": "Track-It ITSM",
-  "version": "1.0.8",
+  "version": "1.0.9",
   "description": "Manage BMC Track-It 2021 tickets, assignments, and solutions from Claude.",
   "author": {
     "name": "ACME Network IT"
@@ -14,7 +14,7 @@
       "command": "node",
       "args": ["server.js"],
       "env": {
-        "TRACKIT_URL": "https://awsc-trackit-02.acmenetwork.com:3000/mcp",
+        "TRACKIT_BASE_URL": "http://awsc-trackit-02.acmenetwork.com/TrackIt/WebApi",
         "TRACKIT_GROUP": "${user_config.group}",
         "TRACKIT_DOMAIN": "${user_config.domain}",
         "TRACKIT_USERNAME": "${user_config.username}",
