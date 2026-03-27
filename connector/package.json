@@ -1,6 +1,0 @@
-{
-  "name": "trackit-connector",
-  "version": "1.0.0",
-  "private": true,
-  "description": "No external dependencies — server.js uses only Node.js built-ins."
-}
