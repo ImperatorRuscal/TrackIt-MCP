@@ -10,7 +10,7 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import { z } from "zod";
 import * as client from "./trackit-client.js";
 
-const SERVER_VERSION = "1.0.5";
+const SERVER_VERSION = "1.0.6";
 
 const INSTRUCTIONS = `
 You are connected to a BMC Track-It 2021 help-desk system.
@@ -406,6 +406,14 @@ server.tool(
 );
 
 // ─── Start ───────────────────────────────────────────────────────────────────
+
+async function shutdown() {
+  await client.logout();
+  process.exit(0);
+}
+
+process.on("SIGTERM", shutdown);
+process.on("SIGINT", shutdown);
 
 async function main() {
   const transport = new StdioServerTransport();

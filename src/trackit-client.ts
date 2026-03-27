@@ -253,3 +253,11 @@ export function getPriorityHierarchy(
     ...(requestorId !== undefined ? { RequestorId: requestorId } : {}),
   });
 }
+
+export async function logout(): Promise<void> {
+  try {
+    await apiCall("GET", "/technicians/logout");
+  } catch {
+    // Best-effort — ignore errors on shutdown
+  }
+}

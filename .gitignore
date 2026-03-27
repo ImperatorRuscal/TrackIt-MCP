@@ -4,3 +4,4 @@ connector/server.js
 connector/*.mcpb
 .env
 .env.local
+.claude/
