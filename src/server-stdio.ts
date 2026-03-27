@@ -10,7 +10,7 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import { z } from "zod";
 import * as client from "./trackit-client.js";
 
-const SERVER_VERSION = "1.0.4";
+const SERVER_VERSION = "1.0.5";
 
 const INSTRUCTIONS = `
 You are connected to a BMC Track-It 2021 help-desk system.
