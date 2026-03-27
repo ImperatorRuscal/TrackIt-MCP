@@ -25,13 +25,13 @@ const TTL_BUFFER_MS = 120_000; // invalidate 2 min before expiry
 function getConfig() {
   const baseUrl = process.env.TRACKIT_BASE_URL;
   const group = process.env.TRACKIT_GROUP;
-  const domain = process.env.TRACKIT_DOMAIN;
+  const domain = process.env.TRACKIT_DOMAIN || ""; // optional — omit for non-Windows auth
   const username = process.env.TRACKIT_USERNAME;
   const password = process.env.TRACKIT_PASSWORD;
 
-  if (!baseUrl || !group || !domain || !username || !password) {
+  if (!baseUrl || !group || !username || !password) {
     throw new Error(
-      "Missing required environment variables: TRACKIT_BASE_URL, TRACKIT_GROUP, TRACKIT_DOMAIN, TRACKIT_USERNAME, TRACKIT_PASSWORD"
+      "Missing required environment variables: TRACKIT_BASE_URL, TRACKIT_GROUP, TRACKIT_USERNAME, TRACKIT_PASSWORD"
     );
   }
 
@@ -119,8 +119,11 @@ export async function getAccessToken(): Promise<string> {
   }
 
   // Full password grant
-  // Username format: GROUP\DOMAIN\username
-  const fullUsername = `${group}\\${domain}\\${username}`;
+  // Username format: GROUP\DOMAIN\username  (Windows auth)
+  //              or: GROUP\username          (non-Windows auth, no domain)
+  const fullUsername = domain
+    ? `${group}\\${domain}\\${username}`
+    : `${group}\\${username}`;
   const body = querystring.stringify({
     grant_type: "password",
     username: fullUsername,

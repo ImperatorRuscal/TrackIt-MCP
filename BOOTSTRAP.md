@@ -23,15 +23,22 @@ POST {TRACKIT_BASE_URL}/token
 Content-Type: application/x-www-form-urlencoded
 
 grant_type=password&username=GROUP%5cDOMAIN%5cuser&password=PASS
+# or without Windows auth:
+grant_type=password&username=GROUP%5cuser&password=PASS
 ```
 
 ### Username format — critical
-The username must be in the format: `GROUP\DOMAIN\username`
+The format depends on whether Windows authentication is in use:
+
+- **With Windows auth**: `GROUP\DOMAIN\username`
+- **Without Windows auth** (domain omitted): `GROUP\username`
+
+Where:
 - `GROUP` = the Track-It group name (e.g. `HELP DESK`) — can contain spaces
-- `DOMAIN` = Windows domain (e.g. `CONTOSO`)
-- `username` = Windows login name
+- `DOMAIN` = Windows domain (e.g. `CONTOSO`) — omit entirely if not using Windows auth
+- `username` = login name
 - Separator is a backslash `\`, not forward slash
-- Example: `HELP DESK\CONTOSO\jsmith`
+- Examples: `HELP DESK\CONTOSO\jsmith` or `HELP DESK\jsmith`
 
 ### Token response
 ```json

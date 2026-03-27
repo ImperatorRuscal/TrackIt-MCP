@@ -45,7 +45,7 @@ Once installed, Claude can look up tickets, add notes, change statuses, create a
 |---|---|---|
 | Track-It API Base URL | `http://trackit-svr/TrackIt/WebApi` | No trailing slash |
 | Track-It Group | `HELP DESK` | Can contain spaces |
-| Windows Domain | `CONTOSO` | |
+| Windows Domain | `CONTOSO` | Optional — leave blank if not using Windows auth |
 | Username | `jsmith` | Login name only, no domain prefix |
 | Password | `••••••••` | Your Windows password |
 
@@ -94,7 +94,8 @@ Track-It uses OAuth2 with a non-standard username format:
 GROUP\DOMAIN\username
 ```
 
-For example: `HELP DESK\CONTOSO\jsmith`
+With Windows auth: `HELP DESK\CONTOSO\jsmith`
+Without Windows auth (domain left blank): `HELP DESK\jsmith`
 
 The connector assembles this automatically from the three separate configuration fields. Tokens are cached in memory per session (~30 minute lifetime) and renewed via refresh token without re-prompting for credentials.
 

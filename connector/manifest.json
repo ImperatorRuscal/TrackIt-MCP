@@ -2,8 +2,11 @@
   "manifest_version": "0.3",
   "name": "trackit-mcp",
   "display_name": "Track-It Help Desk",
-  "version": "1.0.2",
-  "description": "Connect Claude to BMC Track-It 2021 to manage tickets, assignments, and solutions.",
+  "version": "1.0.3",
+  "description": "Connect your AI to BMC Track-It to manage tickets, assignments, and solutions.",
+  "author": {
+    "name": "Imperator Ruscal"
+  },
   "server": {
     "type": "node",
     "entry_point": "server.js",
@@ -36,9 +39,9 @@
     },
     "trackit_domain": {
       "type": "string",
-      "title": "Windows Domain",
-      "description": "Your Windows domain name, e.g. CONTOSO",
-      "required": true,
+      "title": "Windows Domain (optional)",
+      "description": "Your Windows domain name, e.g. CONTOSO. Leave blank if your Track-It installation does not use Windows authentication.",
+      "required": false,
       "sensitive": false
     },
     "trackit_username": {
