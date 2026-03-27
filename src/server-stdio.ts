@@ -10,7 +10,7 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import { z } from "zod";
 import * as client from "./trackit-client.js";
 
-const SERVER_VERSION = "1.0.7";
+const SERVER_VERSION = "1.0.8";
 
 // Catch any errors that escape the main() promise chain — these would otherwise
 // silently kill the process with no output, making the crash invisible in logs.
@@ -427,10 +427,27 @@ process.on("SIGTERM", shutdown);
 process.on("SIGINT", shutdown);
 
 async function main() {
+  // Diagnostic: log stdout errors (EPIPE = host closed its read end of the pipe)
+  process.stdout.on("error", (err) => {
+    process.stderr.write(`[trackit-mcp] stdout error: ${err}\n`);
+    process.exit(1);
+  });
+
+  // Diagnostic: log stdin close (tells us if the host closed the write side)
+  process.stdin.on("close", () => {
+    process.stderr.write("[trackit-mcp] stdin closed\n");
+  });
+
+  // Diagnostic: log process exit with code
+  process.on("exit", (code) => {
+    process.stderr.write(`[trackit-mcp] process exiting with code ${code}\n`);
+  });
+
+  // Log Node.js version — embeded runtimes can differ from system Node.js
+  process.stderr.write(`[trackit-mcp] v${SERVER_VERSION} node/${process.version} started\n`);
+
   const transport = new StdioServerTransport();
   await server.connect(transport);
-  // Log to stderr so it doesn't corrupt the MCP JSON-RPC stream on stdout
-  process.stderr.write(`[trackit-mcp] v${SERVER_VERSION} started\n`);
 }
 
 main().catch((err) => {
