@@ -10,6 +10,7 @@ These are the non-obvious things discovered through trial and error — not in t
 - Base URL pattern: `http://SERVER/TrackIt/WebApi`
 - Example: `http://awsc-trackit-02.acmenetwork.com/TrackIt/WebApi`
 - Swagger UI is at: `http://SERVER/TrackIt/WebApi/swagger/ui/index`
+- Swagger JSON (machine-readable) is at: `http://SERVER/TrackIt/WebApi/swagger/docs/v2`
 - No trailing slash on the base URL — appending a trailing slash causes 404s on some endpoints
 
 ---

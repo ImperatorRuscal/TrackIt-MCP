@@ -1,0 +1,6 @@
+node_modules/
+dist/
+connector/server.js
+connector/*.mcpb
+.env
+.env.local

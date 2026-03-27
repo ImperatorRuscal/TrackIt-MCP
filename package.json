@@ -1,0 +1,19 @@
+{
+  "name": "trackit-mcp",
+  "version": "1.0.0",
+  "description": "MCP server for BMC Track-It 2021",
+  "private": true,
+  "scripts": {
+    "build": "tsc",
+    "bundle": "node scripts/build-connector.mjs",
+    "dev": "tsc && node dist/server-stdio.js"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "esbuild": "^0.20.0",
+    "typescript": "^5.0.0"
+  }
+}

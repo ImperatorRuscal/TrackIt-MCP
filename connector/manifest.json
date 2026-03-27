@@ -1,0 +1,59 @@
+{
+  "manifest_version": "0.3",
+  "name": "trackit-mcp",
+  "display_name": "Track-It Help Desk",
+  "version": "1.0.0",
+  "description": "Connect Claude to BMC Track-It 2021 to manage tickets, assignments, and solutions.",
+  "server": {
+    "type": "node",
+    "entry_point": "server.js",
+    "mcp_config": {
+      "command": "node",
+      "args": ["server.js"],
+      "env": {
+        "TRACKIT_BASE_URL": "${user_config.trackit_base_url}",
+        "TRACKIT_GROUP": "${user_config.trackit_group}",
+        "TRACKIT_DOMAIN": "${user_config.trackit_domain}",
+        "TRACKIT_USERNAME": "${user_config.trackit_username}",
+        "TRACKIT_PASSWORD": "${user_config.trackit_password}"
+      }
+    }
+  },
+  "user_config": {
+    "trackit_base_url": {
+      "type": "string",
+      "title": "Track-It API Base URL",
+      "description": "Base URL for the Track-It WebAPI, e.g. http://your-server/TrackIt/WebApi (no trailing slash)",
+      "required": true,
+      "sensitive": false
+    },
+    "trackit_group": {
+      "type": "string",
+      "title": "Track-It Group",
+      "description": "Your Track-It group name, e.g. HELP DESK (can contain spaces)",
+      "required": true,
+      "sensitive": false
+    },
+    "trackit_domain": {
+      "type": "string",
+      "title": "Windows Domain",
+      "description": "Your Windows domain name, e.g. ACMENETWORK",
+      "required": true,
+      "sensitive": false
+    },
+    "trackit_username": {
+      "type": "string",
+      "title": "Username",
+      "description": "Your Windows login name (without domain prefix), e.g. jsmith",
+      "required": true,
+      "sensitive": false
+    },
+    "trackit_password": {
+      "type": "string",
+      "title": "Password",
+      "description": "Your Windows password",
+      "required": true,
+      "sensitive": true
+    }
+  }
+}
