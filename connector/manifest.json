@@ -2,7 +2,7 @@
   "manifest_version": "0.3",
   "name": "trackit-mcp",
   "display_name": "Track-It Help Desk",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "Connect your AI to BMC Track-It to manage tickets, assignments, and solutions.",
   "author": {
     "name": "Imperator Ruscal"
