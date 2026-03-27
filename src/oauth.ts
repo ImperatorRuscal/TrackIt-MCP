@@ -105,25 +105,12 @@ export function createOAuthRouter(tokenStore: TokenStore): Router {
   });
 
   // --- OAuth discovery ---
-  // If the client already provides credentials (Basic/Bearer), tell it there is no OAuth server.
-  // This prevents mcp-remote (and similar proxies) from attempting an OAuth flow when the caller
-  // is already authenticated — the proxy will fall back to forwarding the supplied header directly.
-  router.get("/.well-known/oauth-authorization-server", (req: Request, res: Response) => {
-    if (req.headers.authorization) {
-      res.status(404).json({ error: "not_found" });
-      return;
-    }
-    const base = process.env.MCP_SERVER_URL ?? `http://localhost:${process.env.PORT ?? 3000}`;
-    res.json({
-      issuer: base,
-      authorization_endpoint: `${base}/authorize`,
-      token_endpoint: `${base}/token`,
-      registration_endpoint: `${base}/register`,
-      response_types_supported: ["code"],
-      grant_types_supported: ["authorization_code"],
-      code_challenge_methods_supported: ["S256"],
-      token_endpoint_auth_methods_supported: ["none"],
-    });
+  // Always returns 404. mcp-remote calls this endpoint WITHOUT forwarding the --header auth
+  // value, so the conditional check on req.headers.authorization is never triggered.
+  // With 404 here, mcp-remote skips OAuth entirely and forwards the --header value directly
+  // on all MCP POST requests instead. Browser users reach the OAuth login at /authorize directly.
+  router.get("/.well-known/oauth-authorization-server", (_req: Request, res: Response) => {
+    res.status(404).json({ error: "not_found" });
   });
 
   // --- GET /authorize — show login form ---
