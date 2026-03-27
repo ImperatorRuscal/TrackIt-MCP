@@ -10,7 +10,7 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import { z } from "zod";
 import * as client from "./trackit-client.js";
 
-const SERVER_VERSION = "1.0.11";
+const SERVER_VERSION = "1.0.12";
 
 // Catch any errors that escape the main() promise chain — these would otherwise
 // silently kill the process with no output, making the crash invisible in logs.
