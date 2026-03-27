@@ -105,12 +105,29 @@ export function createOAuthRouter(tokenStore: TokenStore): Router {
   });
 
   // --- OAuth discovery ---
-  // Always returns 404. mcp-remote calls this endpoint WITHOUT forwarding the --header auth
-  // value, so the conditional check on req.headers.authorization is never triggered.
-  // With 404 here, mcp-remote skips OAuth entirely and forwards the --header value directly
-  // on all MCP POST requests instead. Browser users reach the OAuth login at /authorize directly.
-  router.get("/.well-known/oauth-authorization-server", (_req: Request, res: Response) => {
-    res.status(404).json({ error: "not_found" });
+  // If the caller already has credentials (Authorization header present), return 404 so they
+  // skip OAuth and use their credentials directly on MCP requests (e.g. mcp-remote --header).
+  // If no Authorization header, return a real RFC 8414 discovery document so browser-based
+  // clients (Claude Desktop web, direct MCP clients) can initiate the OAuth flow.
+  //
+  // Note: mcp-remote does NOT forward --header values when calling this endpoint, so
+  // connector users (who pass Basic auth via --header) will receive the discovery document
+  // and mcp-remote will attempt an OAuth flow through our /authorize page.
+  router.get("/.well-known/oauth-authorization-server", (req: Request, res: Response) => {
+    if (req.headers.authorization) {
+      res.status(404).json({ error: "not_found" });
+      return;
+    }
+    const base = `${req.protocol}://${req.get("host")}`;
+    res.json({
+      issuer: base,
+      authorization_endpoint: `${base}/authorize`,
+      token_endpoint: `${base}/token`,
+      registration_endpoint: `${base}/register`,
+      response_types_supported: ["code"],
+      grant_types_supported: ["authorization_code"],
+      code_challenge_methods_supported: ["S256"],
+    });
   });
 
   // --- GET /authorize — show login form ---
