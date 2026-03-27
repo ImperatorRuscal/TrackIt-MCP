@@ -9,7 +9,6 @@
 
 import * as https from "https";
 import * as http from "http";
-import * as querystring from "querystring";
 
 interface TokenEntry {
   accessToken: string;
@@ -100,10 +99,10 @@ export async function getAccessToken(): Promise<string> {
   // Try refresh token first if we have one
   if (cached && cached.refreshToken) {
     try {
-      const body = querystring.stringify({
+      const body = new URLSearchParams({
         grant_type: "refresh_token",
         refresh_token: cached.refreshToken,
-      });
+      }).toString();
       const result = await fetchToken(baseUrl, body);
       const entry: TokenEntry = {
         accessToken: result.accessToken,
@@ -124,11 +123,11 @@ export async function getAccessToken(): Promise<string> {
   const fullUsername = domain
     ? `${group}\\${domain}\\${username}`
     : `${group}\\${username}`;
-  const body = querystring.stringify({
+  const body = new URLSearchParams({
     grant_type: "password",
     username: fullUsername,
     password,
-  });
+  }).toString();
   const result = await fetchToken(baseUrl, body);
   const entry: TokenEntry = {
     accessToken: result.accessToken,

@@ -10,7 +10,18 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import { z } from "zod";
 import * as client from "./trackit-client.js";
 
-const SERVER_VERSION = "1.0.6";
+const SERVER_VERSION = "1.0.7";
+
+// Catch any errors that escape the main() promise chain — these would otherwise
+// silently kill the process with no output, making the crash invisible in logs.
+process.on("uncaughtException", (err) => {
+  process.stderr.write(`[trackit-mcp] uncaughtException: ${err}\n`);
+  process.exit(1);
+});
+process.on("unhandledRejection", (reason) => {
+  process.stderr.write(`[trackit-mcp] unhandledRejection: ${reason}\n`);
+  process.exit(1);
+});
 
 const INSTRUCTIONS = `
 You are connected to a BMC Track-It 2021 help-desk system.

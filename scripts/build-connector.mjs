@@ -32,7 +32,7 @@ await build({
   format: "cjs",
   outfile: join(connectorDir, "server.js"),
   // These Node built-ins are always available in Claude Desktop's embedded runtime
-  external: ["https", "http", "readline", "crypto", "buffer", "url", "path", "querystring"],
+  external: ["https", "http", "readline", "crypto", "buffer", "url", "path"],
   logLevel: "info",
 });
 
