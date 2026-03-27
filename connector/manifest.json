@@ -2,7 +2,7 @@
   "manifest_version": "0.3",
   "name": "trackit-mcp",
   "display_name": "Track-It Help Desk",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Connect Claude to BMC Track-It 2021 to manage tickets, assignments, and solutions.",
   "server": {
     "type": "node",
@@ -37,7 +37,7 @@
     "trackit_domain": {
       "type": "string",
       "title": "Windows Domain",
-      "description": "Your Windows domain name, e.g. ACMENETWORK",
+      "description": "Your Windows domain name, e.g. CONTOSO",
       "required": true,
       "sensitive": false
     },

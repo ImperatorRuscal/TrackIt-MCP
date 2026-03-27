@@ -8,7 +8,7 @@ These are the non-obvious things discovered through trial and error — not in t
 ## Track-It WebAPI location
 
 - Base URL pattern: `http://SERVER/TrackIt/WebApi`
-- Example: `http://awsc-trackit-02.acmenetwork.com/TrackIt/WebApi`
+- Example: `http://trackit-svr.contoso.com/TrackIt/WebApi`
 - Swagger UI is at: `http://SERVER/TrackIt/WebApi/swagger/ui/index`
 - Swagger JSON (machine-readable) is at: `http://SERVER/TrackIt/WebApi/swagger/docs/v2`
 - No trailing slash on the base URL — appending a trailing slash causes 404s on some endpoints
@@ -28,10 +28,10 @@ grant_type=password&username=GROUP%5cDOMAIN%5cuser&password=PASS
 ### Username format — critical
 The username must be in the format: `GROUP\DOMAIN\username`
 - `GROUP` = the Track-It group name (e.g. `HELP DESK`) — can contain spaces
-- `DOMAIN` = Windows domain (e.g. `ACMENETWORK`)
+- `DOMAIN` = Windows domain (e.g. `CONTOSO`)
 - `username` = Windows login name
 - Separator is a backslash `\`, not forward slash
-- Example: `HELP DESK\ACMENETWORK\jsmith`
+- Example: `HELP DESK\CONTOSO\jsmith`
 
 ### Token response
 ```json
