@@ -110,6 +110,15 @@ const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false })); // needed for HTML form POST
 
+// Log every inbound request — helps trace what mcp-remote actually calls
+app.use((req, _res, next) => {
+  const auth = req.headers.authorization
+    ? req.headers.authorization.slice(0, 12) + "…"
+    : "(none)";
+  console.log(`[http] ${req.method} ${req.path}  auth:${auth}`);
+  next();
+});
+
 // Health check
 app.get("/health", (_req, res) => {
   res.json({
