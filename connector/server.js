@@ -1,97 +1,166 @@
 'use strict';
-const { spawn } = require('child_process');
-const path = require('path');
-const fs   = require('fs');
-const os   = require('os');
+// ──────────────────────────────────────────────────────────────────────────────
+// TrackIt MCP Connector – minimal stdio ↔ HTTPS proxy
+//
+// Uses ONLY Node.js built-in modules so it works inside Claude Desktop's
+// embedded / sandboxed Node.js environment without any npm dependencies.
+// ──────────────────────────────────────────────────────────────────────────────
 
-// ---------------------------------------------------------------------------
-// Logging: write to stderr (Claude Desktop log) AND a temp file so we can
-// confirm whether server.js is running regardless of how Claude Desktop
-// handles stdio.  Check: %TEMP%\trackit-connector.log
-// ---------------------------------------------------------------------------
-const LOG_FILE = path.join(os.tmpdir(), 'trackit-connector.log');
-function log(msg) {
-  const line = new Date().toISOString() + ' [trackit] ' + msg + '\n';
-  process.stderr.write(line);
-  try { fs.appendFileSync(LOG_FILE, line); } catch (_) {}
-}
+// Write to stderr BEFORE any require() so we can see if this file even runs.
+process.stderr.write('[trackit] server.js loaded\n');
 
-log('server.js starting — node ' + process.version + ' pid ' + process.pid);
-log('log file: ' + LOG_FILE);
-log('__dirname: ' + __dirname);
+const https    = require('https');
+const http     = require('http');
+const readline = require('readline');
 
+process.stderr.write('[trackit] built-ins loaded\n');
+
+// ── Bypass TLS cert validation ────────────────────────────────────────────────
+// Claude Desktop's embedded Node.js does not share the Windows certificate
+// store, so even valid corporate-CA-issued certs may be rejected.
+process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
+
+// ── Credentials ───────────────────────────────────────────────────────────────
 const group    = (process.env.TRACKIT_GROUP    || '').trim();
 const domain   = (process.env.TRACKIT_DOMAIN   || '').trim();
 const username = (process.env.TRACKIT_USERNAME  || '').trim();
 const password =  process.env.TRACKIT_PASSWORD  || '';
-const url      =  process.env.TRACKIT_URL       || '';
+const rawUrl   =  process.env.TRACKIT_URL       || '';
 
-log('env TRACKIT_URL=' + (url || '(not set)'));
-log('env TRACKIT_GROUP=' + (group || '(not set)'));
-log('env TRACKIT_DOMAIN=' + (domain || '(not set)'));
-log('env TRACKIT_USERNAME=' + (username || '(not set)'));
-log('env TRACKIT_PASSWORD=' + (password ? '(set)' : '(not set)'));
+process.stderr.write('[trackit] url=' + (rawUrl || '(not set)') + '\n');
+process.stderr.write('[trackit] group=' + (group || '(not set)') + '\n');
 
-if (!group || !domain || !username || !password) {
-  log('ERROR: Missing credentials. Reinstall the connector and fill in all required fields.');
+if (!group || !domain || !username || !password || !rawUrl) {
+  process.stderr.write('[trackit] ERROR: Missing credentials or URL. Reinstall connector.\n');
   process.exit(1);
 }
 
-if (!url) {
-  log('ERROR: TRACKIT_URL is not configured. This is a bug in the connector package.');
-  process.exit(1);
-}
+const credential  = group + '\\' + domain + '\\' + username + ':' + password;
+const bearerValue = 'Basic ' + Buffer.from(credential, 'utf8').toString('base64');
 
-// Build the Track-It credential string: GROUP\DOMAIN\username:password → base64
-const credential = group + '\\' + domain + '\\' + username + ':' + password;
-const authHeader = 'Authorization:Basic ' + Buffer.from(credential, 'utf8').toString('base64');
-
-// Locate mcp-remote using an explicit path (more reliable inside Claude Desktop's
-// embedded Node.js than require.resolve which depends on module search paths).
-const mcpRemoteDir = path.join(__dirname, 'node_modules', 'mcp-remote');
-
-let mcpRemoteScript;
+// ── Parse remote URL ──────────────────────────────────────────────────────────
+let parsedUrl;
 try {
-  const mcpRemotePkg = JSON.parse(fs.readFileSync(path.join(mcpRemoteDir, 'package.json'), 'utf8'));
-  const binRelPath   = typeof mcpRemotePkg.bin === 'object'
-    ? mcpRemotePkg.bin['mcp-remote']
-    : mcpRemotePkg.bin;
-  mcpRemoteScript = path.join(mcpRemoteDir, binRelPath);
-} catch (err) {
-  log('ERROR: Could not locate mcp-remote package: ' + err.message);
+  parsedUrl = new URL(rawUrl);
+} catch (e) {
+  process.stderr.write('[trackit] ERROR: Invalid TRACKIT_URL: ' + e.message + '\n');
   process.exit(1);
 }
 
-log('mcp-remote script: ' + mcpRemoteScript);
-log('mcp-remote exists: ' + fs.existsSync(mcpRemoteScript));
-log('process.execPath: ' + process.execPath);
+const host     = parsedUrl.hostname;
+const port     = parseInt(parsedUrl.port, 10) || (parsedUrl.protocol === 'https:' ? 443 : 80);
+const basePath = parsedUrl.pathname;
+const useHttps = parsedUrl.protocol === 'https:';
+const transport = useHttps ? https : http;
 
-if (!fs.existsSync(mcpRemoteScript)) {
-  log('ERROR: mcp-remote script not found. The connector package may be corrupted.');
-  process.exit(1);
+process.stderr.write('[trackit] target=' + host + ':' + port + basePath + '\n');
+
+// ── Session state ─────────────────────────────────────────────────────────────
+let sessionId = null;
+
+// ── HTTP POST helper ──────────────────────────────────────────────────────────
+// Returns an array of parsed JSON-RPC objects from the server response.
+// Handles both plain JSON and text/event-stream (SSE) responses.
+function postMcp(body) {
+  return new Promise(function (resolve, reject) {
+    var payload = JSON.stringify(body);
+    var headers = {
+      'content-type':   'application/json',
+      'accept':         'application/json, text/event-stream',
+      'authorization':  bearerValue,
+      'content-length': Buffer.byteLength(payload).toString(),
+    };
+    if (sessionId) headers['mcp-session-id'] = sessionId;
+
+    var options = {
+      hostname:           host,
+      port:               port,
+      path:               basePath,
+      method:             'POST',
+      headers:            headers,
+      rejectUnauthorized: false,
+    };
+
+    var req = transport.request(options, function (res) {
+      if (res.headers['mcp-session-id']) {
+        sessionId = res.headers['mcp-session-id'];
+        process.stderr.write('[trackit] session=' + sessionId.slice(0, 8) + '…\n');
+      }
+
+      var ct = res.headers['content-type'] || '';
+      var results = [];
+
+      if (ct.indexOf('text/event-stream') !== -1) {
+        // SSE — collect data: lines
+        var buf = '';
+        res.on('data', function (chunk) {
+          buf += chunk.toString();
+          var lines = buf.split('\n');
+          buf = lines.pop();
+          for (var i = 0; i < lines.length; i++) {
+            var line = lines[i];
+            if (line.indexOf('data: ') === 0) {
+              var d = line.slice(6).trim();
+              if (d && d !== '[DONE]') {
+                try { results.push(JSON.parse(d)); } catch (_) {}
+              }
+            }
+          }
+        });
+        res.on('end', function () { resolve(results); });
+      } else {
+        // Plain JSON
+        var chunks = [];
+        res.on('data', function (c) { chunks.push(c); });
+        res.on('end', function () {
+          var text = Buffer.concat(chunks).toString().trim();
+          if (!text) { resolve([]); return; }
+          try { resolve([JSON.parse(text)]); } catch (_) { resolve([]); }
+        });
+      }
+    });
+
+    req.on('error', reject);
+    req.write(payload);
+    req.end();
+  });
 }
 
-// NODE_TLS_REJECT_UNAUTHORIZED=0 allows mcp-remote to connect to servers with
-// self-signed or internally-issued TLS certificates.  Claude Desktop's embedded
-// Node.js does not share the Windows certificate store, so it rejects certs that
-// are trusted in the OS.  This is safe for a controlled corporate-intranet URL.
-log('spawning mcp-remote...');
-const child = spawn(
-  process.execPath,
-  [mcpRemoteScript, url, '--header', authHeader, '--debug'],
-  {
-    stdio: 'inherit',
-    env: { ...process.env, NODE_TLS_REJECT_UNAUTHORIZED: '0' },
-  }
-);
+// ── Stdio MCP loop ────────────────────────────────────────────────────────────
+var rl = readline.createInterface({ input: process.stdin, terminal: false });
 
-child.on('exit',  (code, signal) => {
-  log('mcp-remote exited: code=' + code + ' signal=' + signal);
-  process.exit(code ?? 0);
-});
-child.on('error', (err) => {
-  log('ERROR: Failed to start mcp-remote: ' + err.message);
-  process.exit(1);
+rl.on('line', function (line) {
+  line = line.trim();
+  if (!line) return;
+
+  var msg;
+  try { msg = JSON.parse(line); }
+  catch (_) { return; }
+
+  process.stderr.write('[trackit] → ' + msg.method + '\n');
+
+  postMcp(msg).then(function (responses) {
+    for (var i = 0; i < responses.length; i++) {
+      process.stdout.write(JSON.stringify(responses[i]) + '\n');
+    }
+    if (responses.length > 0) {
+      process.stderr.write('[trackit] ← ' + responses.length + ' msg(s)\n');
+    }
+  }).catch(function (err) {
+    process.stderr.write('[trackit] HTTP error: ' + err.message + '\n');
+    if (msg.id !== undefined) {
+      process.stdout.write(JSON.stringify({
+        jsonrpc: '2.0',
+        id:      msg.id,
+        error:   { code: -32603, message: 'Proxy error: ' + err.message },
+      }) + '\n');
+    }
+  });
 });
 
-log('mcp-remote spawned, pid=' + (child.pid || 'unknown'));
+rl.on('close', function () {
+  process.stderr.write('[trackit] stdin closed\n');
+  process.exit(0);
+});
+
+process.stderr.write('[trackit] ready\n');
