@@ -53,6 +53,7 @@ function makeRequest(
       res.on("data", (chunk) => (data += chunk));
       res.on("end", () => resolve({ status: res.statusCode ?? 0, body: data }));
     });
+    req.setTimeout(30_000, () => req.destroy(new Error(`Track-It request timed out: ${method} ${path}`)));
     req.on("error", reject);
     if (bodyStr) req.write(bodyStr);
     req.end();
@@ -77,7 +78,7 @@ async function apiCall(
 
   if (response.status >= 400) {
     throw new Error(
-      `Track-It API error ${response.status} on ${method} ${path}: ${response.body}`
+      `Track-It API error ${response.status} on ${method} ${path}: ${response.body.slice(0, 300)}`
     );
   }
 

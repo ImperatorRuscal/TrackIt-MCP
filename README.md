@@ -103,7 +103,7 @@ The connector assembles this automatically from the three separate configuration
 
 ## Security notes
 
-**API error messages:** When Track-It returns an error (e.g. invalid field name, permission denied), the full response body is surfaced to Claude verbatim. This is intentional — it allows Claude to self-correct and retry with the right field names. No data leaves the local machine.
+**API error messages:** When Track-It returns an error (e.g. invalid field name, permission denied), the first 300 characters of the response body are surfaced to Claude. This is intentional — it allows Claude to self-correct and retry with the right field names. No data leaves the local machine.
 
 **HTTP deployments:** If your Track-It server is configured with an `http://` URL, the Bearer token travels unencrypted on the network between the user's machine and the Track-It server. For any deployment beyond a local LAN segment, configure Track-It behind HTTPS and use an `https://` base URL.
 

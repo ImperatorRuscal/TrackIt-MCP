@@ -1,5 +1,6 @@
 node_modules/
 dist/
+dev/
 connector/server.js
 connector/*.mcpb
 .env

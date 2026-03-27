@@ -73,10 +73,10 @@ async function fetchToken(
   try {
     parsed = JSON.parse(raw);
   } catch {
-    throw new Error(`Track-It /token returned non-JSON: ${raw}`);
+    throw new Error(`Track-It /token returned non-JSON: ${raw.slice(0, 300)}`);
   }
   if (!parsed.access_token) {
-    throw new Error(`Track-It auth failed: ${raw}`);
+    throw new Error(`Track-It auth failed: ${raw.slice(0, 300)}`);
   }
   return {
     accessToken: parsed.access_token as string,

@@ -1,7 +1,8 @@
 # Track-It MCP Bootstrap Notes
 
-Prompt-feeding knowledge base for building an MCP integration against BMC Track-It 2021.
+Knowledge base of existing research and trial/error findings for building an MCP integration against BMC Track-It 2021.
 These are the non-obvious things discovered through trial and error — not in the official docs.
+This can be ingested as part of a prompt builder to test the efficacy of automating the creation of complex programing.
 
 ---
 
@@ -239,7 +240,7 @@ Include all of these in the MCP server's `instructions` field:
     "entry_point": "server.js",
     "mcp_config": {
       "command": "node",
-      "args": ["server.js"],
+      "args": ["${__dirname}/server.js"],
       "env": {
         "SOME_HARDCODED_URL": "https://...",
         "USER_VALUE": "${user_config.fieldname}"
@@ -259,11 +260,11 @@ Include all of these in the MCP server's `instructions` field:
 ```
 - `command` is **required** — the schema rejects manifests without it
 - `entry_point` and `command/args` can coexist; `command/args` takes precedence for execution
-- `${user_config.fieldname}` substitution works in `env` values; it does **not** work in `args`
+- `${user_config.fieldname}` substitution works in both `env` values and `args`
+- `${__dirname}` in `args` expands to the connector's installation directory — **always use it** for the script path so Node.js receives an absolute path. Claude Desktop spawns child processes from `C:\Windows\system32` on Windows, so a bare `server.js` will not resolve.
 - `"sensitive": true` on a user_config field masks the value in the UI
 
 ### Things that don't work
-- `${__dirname}` in `args` — not substituted, passed as a literal string
 - `child_process.spawn()` — Claude Desktop's embedded Node.js sandboxes this module; any connector that tries to spawn a subprocess will silently fail with no error output
 - `fs` module writes — may also be sandboxed; don't rely on file I/O in connector code
 - Remote HTTP MCP servers from Claude.ai web — intranet servers are unreachable; only works if the server has a public URL
@@ -281,8 +282,7 @@ Include all of these in the MCP server's `instructions` field:
 ```
 TRACKIT_BASE_URL=http://SERVER/TrackIt/WebApi   # Track-It API, no trailing slash
 TRACKIT_GROUP=HELP DESK                          # Track-It group name
-TRACKIT_DOMAIN=YOURDOMAIN                        # Windows domain
+TRACKIT_DOMAIN=YOURDOMAIN                        # Windows domain (omit if not using Windows auth)
 TRACKIT_USERNAME=jsmith                          # Login name only, no domain prefix
 TRACKIT_PASSWORD=...                             # Windows password
-TOKEN_TTL_MS=1680000                             # Optional, default 28 min (28 * 60 * 1000)
 ```

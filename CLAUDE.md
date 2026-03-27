@@ -34,9 +34,10 @@ npx tsc --noEmit     # type-check only
 
 ## Architecture notes
 
-- **Stdio transport only.** Claude Desktop runs the server as a child process; stdout is the MCP JSON-RPC channel. Never write to stdout — always use `process.stderr.write()` for diagnostics.
+- **Stdio transport only.** Claude Desktop runs the server as a child process; stdout is the MCP JSON-RPC channel. Never write to stdout — use `console.error()` for diagnostics (Claude Desktop's embedded runtime routes this to the MCP log; `process.stderr.write()` does not appear there).
 - **No `node_modules` in the connector.** esbuild bundles everything into a single `server.js`. The MCPB archive contains only `manifest.json` + `server.js`.
-- **`${user_config.fieldname}` substitution** works in manifest `env` values but NOT in `args`. Credentials flow in as environment variables.
+- **`${user_config.fieldname}` substitution** works in manifest `env` values AND `args`. Credentials flow in as environment variables. The supported path variable is `${__dirname}` — it expands to the connector's installation directory at runtime. The `mcp_config` args use `"${__dirname}/server.js"` so that Node.js receives an absolute path regardless of the process working directory (Claude Desktop spawns from `C:\Windows\system32` on Windows).
+- **`cwd` is NOT a valid `mcp_config` field.** Claude Desktop's manifest validator will reject it. Use `${__dirname}` in args instead.
 - **`child_process.spawn()` and `fs` writes are sandboxed** in Claude Desktop's embedded Node.js. Don't add them.
 - **`node:` URL-scheme prefix is NOT supported** in Claude Desktop's embedded Node.js runtime. The MCP SDK uses `import process from 'node:process'` which esbuild would compile to a top-level `require("node:process")` — failing silently before error handlers are registered. The build script uses a `strip-node-prefix` esbuild plugin to remap all `node:*` imports to their bare-name equivalents (e.g. `process`, `https`). Do not remove this plugin.
 - **Zod v4 is installed.** `z.record()` requires two arguments: `z.record(z.string(), z.unknown())`. The single-argument form from Zod v3 does not compile.

@@ -1,6 +1,6 @@
 {
   "name": "trackit-mcp",
-  "version": "1.0.12",
+  "version": "1.2.0",
   "license": "AGPL-3.0-only",
   "description": "MCP server for BMC Track-It 2021",
   "private": true,
